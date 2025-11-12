@@ -1,6 +1,8 @@
 package com.steve.ai.entity;
 
 import com.steve.ai.action.ActionExecutor;
+import com.steve.ai.config.AgentConfig;
+import com.steve.ai.config.AgentConfigLoader;
 import com.steve.ai.memory.SteveMemory;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -26,6 +28,7 @@ public class SteveEntity extends PathfinderMob {
     private String steveName;
     private SteveMemory memory;
     private ActionExecutor actionExecutor;
+    private AgentConfig agentConfig;
     private int tickCounter = 0;
     private boolean isFlying = false;
     private boolean isInvulnerable = false;
@@ -35,6 +38,8 @@ public class SteveEntity extends PathfinderMob {
         this.steveName = "Steve";
         this.memory = new SteveMemory(this);
         this.actionExecutor = new ActionExecutor(this);
+        this.agentConfig = AgentConfigLoader.loadDefault();
+        this.actionExecutor.setAgentConfig(agentConfig);
         this.setCustomNameVisible(true);
         
         this.isInvulnerable = true;
@@ -77,6 +82,15 @@ public class SteveEntity extends PathfinderMob {
         this.setCustomName(Component.literal(name));
     }
 
+    public void setAgentConfig(AgentConfig agentConfig) {
+        this.agentConfig = agentConfig;
+        this.actionExecutor.setAgentConfig(agentConfig);
+    }
+
+    public AgentConfig getAgentConfig() {
+        return agentConfig;
+    }
+
     public String getSteveName() {
         return this.steveName;
     }
@@ -93,7 +107,10 @@ public class SteveEntity extends PathfinderMob {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString("SteveName", this.steveName);
-        
+        if (this.agentConfig != null) {
+            tag.putString("AgentProfile", this.agentConfig.getProfileName());
+        }
+
         CompoundTag memoryTag = new CompoundTag();
         this.memory.saveToNBT(memoryTag);
         tag.put("Memory", memoryTag);
@@ -105,7 +122,14 @@ public class SteveEntity extends PathfinderMob {
         if (tag.contains("SteveName")) {
             this.setSteveName(tag.getString("SteveName"));
         }
-        
+
+        if (tag.contains("AgentProfile")) {
+            String profile = tag.getString("AgentProfile");
+            this.setAgentConfig(AgentConfigLoader.loadForProfile(profile));
+        } else {
+            this.setAgentConfig(AgentConfigLoader.loadDefault());
+        }
+
         if (tag.contains("Memory")) {
             this.memory.loadFromNBT(tag.getCompound("Memory"));
         }

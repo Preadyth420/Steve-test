@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.steve.ai.SteveMod;
-import com.steve.ai.config.SteveConfig;
+import com.steve.ai.config.AgentConfig;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -18,22 +18,20 @@ public class OpenAIClient {
     private static final int INITIAL_RETRY_DELAY_MS = 1000; // 1 second
 
     private final HttpClient client;
-    private final String apiKey;
-
     public OpenAIClient() {
-        this.apiKey = SteveConfig.OPENAI_API_KEY.get();
         this.client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
             .build();
     }
 
-    public String sendRequest(String systemPrompt, String userPrompt) {
+    public String sendRequest(AgentConfig agentConfig, String systemPrompt, String userPrompt) {
+        String apiKey = agentConfig.getOpenAiApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
             SteveMod.LOGGER.error("OpenAI API key not configured!");
             return null;
         }
 
-        JsonObject requestBody = buildRequestBody(systemPrompt, userPrompt);
+        JsonObject requestBody = buildRequestBody(agentConfig, systemPrompt, userPrompt);
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(OPENAI_API_URL))
@@ -98,11 +96,11 @@ public class OpenAIClient {
         return null;
     }
 
-    private JsonObject buildRequestBody(String systemPrompt, String userPrompt) {
+    private JsonObject buildRequestBody(AgentConfig agentConfig, String systemPrompt, String userPrompt) {
         JsonObject body = new JsonObject();
-        body.addProperty("model", SteveConfig.OPENAI_MODEL.get());
-        body.addProperty("temperature", SteveConfig.TEMPERATURE.get());
-        body.addProperty("max_tokens", SteveConfig.MAX_TOKENS.get());
+        body.addProperty("model", agentConfig.getOpenAiModel());
+        body.addProperty("temperature", agentConfig.getTemperature());
+        body.addProperty("max_tokens", agentConfig.getMaxTokens());
 
         JsonArray messages = new JsonArray();
         

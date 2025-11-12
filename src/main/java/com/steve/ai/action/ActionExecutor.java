@@ -4,6 +4,8 @@ import com.steve.ai.SteveMod;
 import com.steve.ai.action.actions.*;
 import com.steve.ai.ai.ResponseParser;
 import com.steve.ai.ai.TaskPlanner;
+import com.steve.ai.config.AgentConfig;
+import com.steve.ai.config.AgentConfigLoader;
 import com.steve.ai.config.SteveConfig;
 import com.steve.ai.entity.SteveEntity;
 
@@ -14,11 +16,12 @@ public class ActionExecutor {
     private final SteveEntity steve;
     private TaskPlanner taskPlanner;  // Lazy-initialized to avoid loading dependencies on entity creation
     private final Queue<Task> taskQueue;
-    
+
     private BaseAction currentAction;
     private String currentGoal;
     private int ticksSinceLastAction;
     private BaseAction idleFollowAction;  // Follow player when idle
+    private AgentConfig agentConfig;
 
     public ActionExecutor(SteveEntity steve) {
         this.steve = steve;
@@ -26,14 +29,22 @@ public class ActionExecutor {
         this.taskQueue = new LinkedList<>();
         this.ticksSinceLastAction = 0;
         this.idleFollowAction = null;
+        this.agentConfig = AgentConfigLoader.loadDefault();
     }
-    
+
     private TaskPlanner getTaskPlanner() {
         if (taskPlanner == null) {
             SteveMod.LOGGER.info("Initializing TaskPlanner for Steve '{}'", steve.getSteveName());
-            taskPlanner = new TaskPlanner();
+            taskPlanner = new TaskPlanner(agentConfig);
         }
         return taskPlanner;
+    }
+
+    public void setAgentConfig(AgentConfig agentConfig) {
+        this.agentConfig = agentConfig;
+        if (this.taskPlanner != null) {
+            this.taskPlanner = new TaskPlanner(agentConfig);
+        }
     }
 
     public void processNaturalLanguageCommand(String command) {

@@ -2,7 +2,7 @@ package com.steve.ai.ai;
 
 import com.steve.ai.SteveMod;
 import com.steve.ai.action.Task;
-import com.steve.ai.config.SteveConfig;
+import com.steve.ai.config.AgentConfig;
 import com.steve.ai.entity.SteveEntity;
 import com.steve.ai.memory.WorldKnowledge;
 
@@ -12,11 +12,15 @@ public class TaskPlanner {
     private final OpenAIClient openAIClient;
     private final GeminiClient geminiClient;
     private final GroqClient groqClient;
+    private final LocalLLMClient localLLMClient;
+    private final AgentConfig agentConfig;
 
-    public TaskPlanner() {
+    public TaskPlanner(AgentConfig agentConfig) {
+        this.agentConfig = agentConfig;
         this.openAIClient = new OpenAIClient();
         this.geminiClient = new GeminiClient();
         this.groqClient = new GroqClient();
+        this.localLLMClient = new LocalLLMClient();
     }
 
     public ResponseParser.ParsedResponse planTasks(SteveEntity steve, String command) {
@@ -24,16 +28,25 @@ public class TaskPlanner {
             String systemPrompt = PromptBuilder.buildSystemPrompt();
             WorldKnowledge worldKnowledge = new WorldKnowledge(steve);
             String userPrompt = PromptBuilder.buildUserPrompt(steve, command, worldKnowledge);
-            
-            String provider = SteveConfig.AI_PROVIDER.get().toLowerCase();
-            SteveMod.LOGGER.info("Requesting AI plan for Steve '{}' using {}: {}", steve.getSteveName(), provider, command);
-            
+
+            String provider = agentConfig.getProvider().toLowerCase();
+            SteveMod.LOGGER.info(
+                "Requesting AI plan for Steve '{}' using {} profile '{}' (source: {}) for command {}",
+                steve.getSteveName(),
+                provider,
+                agentConfig.getProfileName(),
+                agentConfig.describeSourceFile(),
+                command
+            );
+
             String response = getAIResponse(provider, systemPrompt, userPrompt);
             
             if (response == null) {
                 SteveMod.LOGGER.error("Failed to get AI response for command: {}", command);
                 return null;
-            }            ResponseParser.ParsedResponse parsedResponse = ResponseParser.parseAIResponse(response);
+            }
+
+            ResponseParser.ParsedResponse parsedResponse = ResponseParser.parseAIResponse(response);
             
             if (parsedResponse == null) {
                 SteveMod.LOGGER.error("Failed to parse AI response");
@@ -52,20 +65,21 @@ public class TaskPlanner {
 
     private String getAIResponse(String provider, String systemPrompt, String userPrompt) {
         String response = switch (provider) {
-            case "groq" -> groqClient.sendRequest(systemPrompt, userPrompt);
-            case "gemini" -> geminiClient.sendRequest(systemPrompt, userPrompt);
-            case "openai" -> openAIClient.sendRequest(systemPrompt, userPrompt);
+            case "groq" -> groqClient.sendRequest(agentConfig, systemPrompt, userPrompt);
+            case "gemini" -> geminiClient.sendRequest(agentConfig, systemPrompt, userPrompt);
+            case "openai" -> openAIClient.sendRequest(agentConfig, systemPrompt, userPrompt);
+            case "local" -> localLLMClient.sendRequest(agentConfig, systemPrompt, userPrompt);
             default -> {
-                SteveMod.LOGGER.warn("Unknown AI provider '{}', using Groq", provider);
-                yield groqClient.sendRequest(systemPrompt, userPrompt);
+                SteveMod.LOGGER.warn("Unknown AI provider '{}' (supported: groq, openai, gemini, local), using Groq", provider);
+                yield groqClient.sendRequest(agentConfig, systemPrompt, userPrompt);
             }
         };
-        
+
         if (response == null && !provider.equals("groq")) {
             SteveMod.LOGGER.warn("{} failed, trying Groq as fallback", provider);
-            response = groqClient.sendRequest(systemPrompt, userPrompt);
+            response = groqClient.sendRequest(agentConfig, systemPrompt, userPrompt);
         }
-        
+
         return response;
     }
 
