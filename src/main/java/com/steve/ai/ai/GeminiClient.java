@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.steve.ai.SteveMod;
-import com.steve.ai.config.SteveConfig;
+import com.steve.ai.config.AgentConfig;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -22,22 +22,20 @@ public class GeminiClient {
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     
     private final HttpClient client;
-    private final String apiKey;
-
     public GeminiClient() {
-        this.apiKey = SteveConfig.OPENAI_API_KEY.get(); // We'll use the same config for now
         this.client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
             .build();
     }
 
-    public String sendRequest(String systemPrompt, String userPrompt) {
+    public String sendRequest(AgentConfig agentConfig, String systemPrompt, String userPrompt) {
+        String apiKey = agentConfig.getOpenAiApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
             SteveMod.LOGGER.error("Gemini API key not configured!");
             return null;
         }
 
-        JsonObject requestBody = buildRequestBody(systemPrompt, userPrompt);
+        JsonObject requestBody = buildRequestBody(agentConfig, systemPrompt, userPrompt);
         String urlWithKey = GEMINI_API_URL + "?key=" + apiKey;
         
         HttpRequest request = HttpRequest.newBuilder()
@@ -70,7 +68,7 @@ public class GeminiClient {
         }
     }
 
-    private JsonObject buildRequestBody(String systemPrompt, String userPrompt) {
+    private JsonObject buildRequestBody(AgentConfig agentConfig, String systemPrompt, String userPrompt) {
         JsonObject body = new JsonObject();
         
         // Gemini uses "contents" array with "parts"
@@ -89,8 +87,8 @@ public class GeminiClient {
         body.add("contents", contents);
         
         JsonObject generationConfig = new JsonObject();
-        generationConfig.addProperty("temperature", SteveConfig.TEMPERATURE.get());
-        generationConfig.addProperty("maxOutputTokens", SteveConfig.MAX_TOKENS.get());
+        generationConfig.addProperty("temperature", agentConfig.getTemperature());
+        generationConfig.addProperty("maxOutputTokens", agentConfig.getMaxTokens());
         body.add("generationConfig", generationConfig);
         
         return body;

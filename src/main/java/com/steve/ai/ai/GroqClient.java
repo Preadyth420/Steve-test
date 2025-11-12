@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.steve.ai.SteveMod;
-import com.steve.ai.config.SteveConfig;
+import com.steve.ai.config.AgentConfig;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,17 +21,15 @@ public class GroqClient {
     private static final String GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
     
     private final HttpClient client;
-    private final String apiKey;
-
     public GroqClient() {
-        this.apiKey = SteveConfig.OPENAI_API_KEY.get(); // Reuse same config field
         this.client = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     }
 
-    public String sendRequest(String systemPrompt, String userPrompt) {
+    public String sendRequest(AgentConfig agentConfig, String systemPrompt, String userPrompt) {
+        String apiKey = agentConfig.getOpenAiApiKey();
         if (apiKey == null || apiKey.isEmpty()) {
             SteveMod.LOGGER.error("Groq API key is not set in the config.");
             return null;

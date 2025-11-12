@@ -18,7 +18,9 @@ public class SteveCommands {
         dispatcher.register(Commands.literal("steve")
             .then(Commands.literal("spawn")
                 .then(Commands.argument("name", StringArgumentType.string())
-                    .executes(SteveCommands::spawnSteve)))
+                    .executes(SteveCommands::spawnSteve)
+                    .then(Commands.argument("profile", StringArgumentType.string())
+                        .executes(SteveCommands::spawnSteve))))
             .then(Commands.literal("remove")
                 .then(Commands.argument("name", StringArgumentType.string())
                     .executes(SteveCommands::removeSteve)))
@@ -36,6 +38,11 @@ public class SteveCommands {
 
     private static int spawnSteve(CommandContext<CommandSourceStack> context) {
         String name = StringArgumentType.getString(context, "name");
+        String profile = null;
+        try {
+            profile = StringArgumentType.getString(context, "profile");
+        } catch (IllegalArgumentException ignored) {
+        }
         CommandSourceStack source = context.getSource();
         
         ServerLevel serverLevel = source.getLevel();
@@ -55,7 +62,7 @@ public class SteveCommands {
         }
         Vec3 spawnPos = sourcePos;
         
-        SteveEntity steve = manager.spawnSteve(serverLevel, spawnPos, name);
+        SteveEntity steve = manager.spawnSteve(serverLevel, spawnPos, name, profile);
         if (steve != null) {
             source.sendSuccess(() -> Component.literal("Spawned Steve: " + name), true);
             return 1;

@@ -20,19 +20,19 @@ public class ServerEventHandler {
         if (event.getEntity() instanceof ServerPlayer player) {
             ServerLevel level = (ServerLevel) player.level();
             SteveManager manager = SteveMod.getSteveManager();
-            if (!stevesSpawned) {                manager.clearAllSteves();
+            if (!stevesSpawned) {
+                manager.clearAllSteves();
                 
                 // Clear structure registry for fresh spatial awareness
                 StructureRegistry.clear();
                 
                 // Then, remove ALL SteveEntity instances from the world (including ones loaded from NBT)
-                int removedCount = 0;
                 for (var entity : level.getAllEntities()) {
                     if (entity instanceof SteveEntity) {
                         entity.discard();
-                        removedCount++;
                     }
-                }                Vec3 playerPos = player.position();
+                }
+                Vec3 playerPos = player.position();
                 Vec3 lookVec = player.getLookAngle();
                 
                 String[] names = {"Steve", "Alex", "Bob", "Charlie"};
@@ -47,11 +47,11 @@ public class ServerEventHandler {
                         playerPos.z + offsetZ
                     );
                     
-                    SteveEntity steve = manager.spawnSteve(level, spawnPos, names[i]);
-                    if (steve != null) {                    }
+                    manager.spawnSteve(level, spawnPos, names[i], null);
                 }
-                
-                stevesSpawned = true;            }
+
+                stevesSpawned = true;
+            }
         }
     }
 

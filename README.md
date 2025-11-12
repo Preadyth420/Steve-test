@@ -46,25 +46,70 @@ The coordination happens server-side through a manager that tracks active builds
 **You need:**
 - Minecraft 1.20.1 with Forge
 - Java 17
-- An OpenAI API key (or Groq/Gemini if you prefer)
+- An OpenAI API key (or Groq/Gemini if you prefer) **or** a local GGUF model served through llama.cpp/LM Studio
 
 **Installation:**
 1. Download the JAR from releases
 2. Put it in your `mods` folder
 3. Launch Minecraft
 4. Copy `config/steve-common.toml.example` to `config/steve-common.toml`
-5. Add your API key to the config
+5. Choose your AI provider in the `[ai]` section (groq/openai/gemini/local)
+6. Fill in the provider-specific configuration (API keys or local server details)
 
 Config looks like this:
 ```toml
+[ai]
+provider = "groq"
+
 [openai]
 apiKey = "your-api-key-here"
 model = "gpt-3.5-turbo"
 maxTokens = 1000
 temperature = 0.7
+
+[local]
+serverUrl = "http://localhost:8080/v1/chat/completions"
+model = "models/llama-3.1-8b-instruct.Q4_K_M.gguf"
+maxTokens = 512
+temperature = 0.7
 ```
 
-Then just spawn a Steve with `/steve spawn Bob` and press K to start using them.
+### Using Local GGUF Models
+
+To use a locally hosted model (GGUF via llama.cpp or LM Studio):
+
+1. Start your inference server in OpenAI-compatible mode. For llama.cpp this is typically:
+   ```bash
+   ./llama-server --model /path/to/your-model.gguf --api --port 8080
+   ```
+2. Set `provider = "local"` in the `[ai]` section of `steve-common.toml`.
+3. Update the `[local]` block with the chat completions endpoint, model identifier, and any optional auth token.
+
+The mod will send standard chat completion requests to the configured endpoint, so any service that mimics the OpenAI schema will work.
+
+### Per-Agent Configuration Profiles
+
+Want different Steves to talk to different models or endpoints? Drop additional TOML files next to the common config:
+
+```
+config/
+├── steve-common.toml
+├── steve-planner.toml
+├── steve-builder.toml
+└── steve-miner.toml
+```
+
+Each profile can override the `[ai]`, `[openai]`, or `[local]` sections from the shared config. When you spawn an agent, the mod
+looks for `steve-<profile>.toml`:
+
+- `/steve spawn Planner` → loads `steve-planner.toml`
+- `/steve spawn Builder` → loads `steve-builder.toml`
+- `/steve spawn Miner local-miner` → explicitly loads `steve-local-miner.toml` (second argument is the profile override)
+
+If a profile file is missing, the agent falls back to `steve-common.toml` but keeps trying to load the custom profile on future
+starts—perfect for editing configs while the world is running.
+
+Then just spawn a Steve with `/steve spawn Bob` (or `/steve spawn Bob builder`) and press K to start using them.
 
 ## How We Built This
 
